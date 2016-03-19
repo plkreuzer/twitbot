@@ -83,10 +83,12 @@ def main():
             api.logger.info('I just tweeted: \"%s\"', tweet)
             time.sleep(pause)
             
-    if idfile != None:
+    if idfile != None and id != -1:
         api.logger.info('ID is now %d', id)
         idfile.seek(0)
         idfile.write(str(id) + "\n")
+        idfile.close()
+    elif idfile != None and id == -1:
         idfile.close()
 
 if __name__ == '__main__':
