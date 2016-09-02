@@ -27,18 +27,52 @@ def main():
     curTime = now
     mentions = args.mentions.rstrip()
     replies = args.replies.rstrip()
+    extraLineLen = len(mentions) + len(replies) + 3
+    punctList = ['.', ',', ':', ';', '-']
     for line in srcfile:
         line = line.rstrip()
-        finalLine = replies + " " + line + " " + mentions + "\n"
-        
-        # If the line is > 140 + \n then issue warning
-        if len(finalLine) > 141:
-            print "Warning: \'" + finalLine + "\' is over 140char"
-        
-        dstfile.write("{time}|{twt}".format(time=str(curTime),twt=finalLine))
-        if not re.search("\.\.\.$", line):
+        if (len(line) + extraLineLen) > 141:
+            '''
+            Resultant line will be too big for one tweet, so break things up into sections like:
+                <replies> <text> (X/Y) <mentions>
+            First, split the text and put it into the tweetlist.
+            Then, format and write the tweets to the file.
+            '''
+            tweetList = []
+            maxLen = 140 - extraLineLen
+            countLen = len('XX/YY')
+            while len(line) > maxLen:
+                '''
+                    Thanks herminator: https://www.reddit.com/r/learnpython/comments/2fv6z2/help_splitting_strings_to_make_tweets_out_of_text/
+                '''
+                cutWhere, cutWhy = max((line.rfind(punc, 0, maxLen - countLen), punc) for punc in punctList)
+                if cutWhere <= 0:
+                    cutWhere = line.rfind(' ', 0, maxLen - countLen)
+                    cutWhy = ' '
+                elif line[cutWhere+1] == '"':
+                    cutWhere += 1
+                cutWhere += len(cutWhy)
+                tweetList.append(line[:cutWhere].rstrip())
+                line = line[cutWhere:].lstrip()
+            
+            if len(line) > 0:
+                tweetList.append(line)
+            
+            totTweets = len(tweetList)
+            curTweet = 1
+            for tweet in tweetList:
+                fTweet = "{twt} {X}/{Y} {mench}\n".format(rply = replies, 
+                    twt = tweet, X = curTweet, Y = totTweets, mench = mentions)
+                if len(replies) > 0:
+                    fTweet = replies + " " + fTweet
+                dstfile.write("{time}|{twt}".format(time=str(curTime),twt=fTweet))
+                curTweet += 1
             curTime += args.timestride
-        
+        else:
+            finalLine = replies + " " + line + " " + mentions + "\n"
+            dstfile.write("{time}|{twt}".format(time=str(curTime),twt=finalLine))
+            if not re.search("\.\.\.$", line):
+                curTime += args.timestride
     dstfile.close()
     
 
