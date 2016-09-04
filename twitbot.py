@@ -53,7 +53,8 @@ def main():
     tbu.args.add_default_args(parser, version='1.0')
     
     args = parser.parse_args()
-    api = tbu.api.API(screen_name=args.screen_name,config_file=args.config_file)
+    api = tbu.api.API(screen_name=args.screen_name, config_file=args.config_file, 
+        wait_on_rate_limit = True, wait_on_rate_limit_notify = True)
     api.logger.info('Timewindow is %d', args.timewindow)
     
     id = -1
@@ -79,7 +80,11 @@ def main():
          
     if not args.dry_run:
         for tweet in tweets:
-            api.update_status(tweet)
+            try:
+                api.update_status(tweet)
+            except Exception, e:
+                api.logger.error("Error tweating id %d. Error: %s", id, e)
+                break
             api.logger.info('I just tweeted: \"%s\"', tweet)
             time.sleep(pause)
             
